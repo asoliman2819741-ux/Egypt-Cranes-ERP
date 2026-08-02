@@ -1,0 +1,6 @@
+{
+  "name": "Egypt Cranes ERP",
+  "description": "نظام تخطيط موارد المؤسسات المتكامل لإدارة الأوناش، النقليات، الصيانة، المالية، والمخازن لشركة إيجيبت كرينز (Egypt Cranes)",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
