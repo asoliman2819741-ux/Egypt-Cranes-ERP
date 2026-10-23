@@ -4,9 +4,10 @@ import { initialJournalEntries } from '../mockData';
 import { 
   Plus, Search, Trash2, CheckCircle2, AlertTriangle, FileText, 
   Calendar, PlusCircle, Building2, ChevronDown, Sparkles,
-  Coins, RefreshCw, Save, ArrowLeftRight, Check, Globe
+  Coins, RefreshCw, Save, ArrowLeftRight, Check, Globe, Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ExportPDFButton from '../components/ExportPDFButton';
 import { 
   getSavedExchangeRates, 
   saveExchangeRates, 
@@ -390,12 +391,41 @@ export default function JournalEntries({
             إدخال واعتماد المعاملات المالية المباشرة والتشغيلية في مصر بالجنيه المصري (EGP) مع ربط تفاعلي بمراكز التكلفة والمشاريع.
           </p>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2.5 bg-[#0F4C81] hover:bg-[#0c3d67] text-white font-extrabold text-xs rounded-2xl transition-all duration-300 shadow-sm flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> إضافة قيد يومية مزدوج
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <ExportPDFButton
+            variant="outline"
+            titleAr="تصدير دفتر القيود PDF 📄"
+            titleEn="Export Journal Register PDF"
+            exportOptions={{
+              titleAr: 'دفتر قيود اليومية المحاسبية المعتمدة - إيجيبت كرينز',
+              titleEn: 'General Journal Entries Register - Egypt Cranes',
+              subtitleAr: `سجل حركة القيود اليومية المحاسبية لعدد (${filteredEntries.length}) قيد مالي`,
+              filename: 'journal_entries_register',
+              columns: [
+                { headerAr: 'رقم السند', accessor: 'docNo', align: 'center', width: '100px' },
+                { headerAr: 'التاريخ', accessor: (r: any) => new Date(r.date).toLocaleDateString('ar-EG'), align: 'center', width: '100px' },
+                { headerAr: 'البيان والشرح التفصيلي', accessor: 'description', align: 'right' },
+                { headerAr: 'مركز التكلفة', accessor: (r: any) => r.costCenterName || 'عام', align: 'center', width: '130px' },
+                { headerAr: 'المدين (EGP)', accessor: (r: any) => `${Number(r.debit * (r.exchangeRate || 1)).toLocaleString(undefined, {maximumFractionDigits: 2})} ج.م`, align: 'left', width: '140px' },
+                { headerAr: 'الدائن (EGP)', accessor: (r: any) => `${Number(r.credit * (r.exchangeRate || 1)).toLocaleString(undefined, {maximumFractionDigits: 2})} ج.م`, align: 'left', width: '140px' },
+                { headerAr: 'الحالة', accessor: (r: any) => r.status === 'approved' ? 'معتمد' : r.status === 'rejected' ? 'مرفوض' : 'قيد المراجعة', align: 'center', width: '90px' }
+              ],
+              data: filteredEntries,
+              summaryItems: [
+                { labelAr: 'عدد القيود المشمولة', value: `${filteredEntries.length} قيد` },
+                { labelAr: 'إجمالي الحركات المدينة', value: `${filteredEntries.reduce((acc, curr) => acc + (curr.debit * (curr.exchangeRate || 1)), 0).toLocaleString()} ج.م` },
+                { labelAr: 'إجمالي الحركات الدائنة', value: `${filteredEntries.reduce((acc, curr) => acc + (curr.credit * (curr.exchangeRate || 1)), 0).toLocaleString()} ج.م` },
+                { labelAr: 'حالة التوازن', value: 'متوازن 100%', highlight: true }
+              ]
+            }}
+          />
+          <button 
+            onClick={() => setShowAddForm(true)}
+            className="px-4 py-2.5 bg-[#0F4C81] hover:bg-[#0c3d67] text-white font-extrabold text-xs rounded-2xl transition-all duration-300 shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> إضافة قيد يومية مزدوج
+          </button>
+        </div>
       </div>
 
       {/* Exchange Rates Control Center */}
@@ -642,14 +672,43 @@ export default function JournalEntries({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    {entry.status === 'pending' && (
-                      <button 
-                        onClick={() => handleApproveEntry(entry)}
-                        className="text-[10px] font-black text-emerald-600 hover:bg-emerald-100 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 transition-colors shadow-3xs cursor-pointer"
-                      >
-                        اعتماد القيد
-                      </button>
-                    )}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <ExportPDFButton
+                        size="sm"
+                        variant="ghost"
+                        titleAr="طباعة السند PDF"
+                        titleEn="Print Voucher PDF"
+                        exportOptions={{
+                          titleAr: `سند قيد يومية محاسبي - ${entry.docNo}`,
+                          titleEn: `Journal Entry Voucher - ${entry.docNo}`,
+                          subtitleAr: `التاريخ: ${new Date(entry.date).toLocaleDateString('ar-EG')} • البيان: ${entry.description}`,
+                          filename: `journal_voucher_${entry.docNo}`,
+                          columns: [
+                            { headerAr: 'اسم الحساب المحاسبي', accessor: 'accountName', align: 'right' },
+                            { headerAr: 'مركز التكلفة المرتبط', accessor: (r: any) => r.costCenterName || entry.costCenterName || 'عام', align: 'center', width: '130px' },
+                            { headerAr: 'مدين (Debit)', accessor: (r: any) => r.debit > 0 ? `${Number(r.debit).toLocaleString(undefined, {maximumFractionDigits: 2})} ${getCurrencySymbol(entry.currency)}` : '-', align: 'left', width: '130px' },
+                            { headerAr: 'دائن (Credit)', accessor: (r: any) => r.credit > 0 ? `${Number(r.credit).toLocaleString(undefined, {maximumFractionDigits: 2})} ${getCurrencySymbol(entry.currency)}` : '-', align: 'left', width: '130px' }
+                          ],
+                          data: entry.lines || [
+                            { accountName: 'حساب المدين', debit: entry.debit, credit: 0, costCenterName: entry.costCenterName },
+                            { accountName: 'حساب الدائن', debit: 0, credit: entry.credit, costCenterName: entry.costCenterName }
+                          ],
+                          summaryItems: [
+                            { labelAr: 'إجمالي طرف المدين', value: `${entry.debit.toLocaleString()} ${getCurrencySymbol(entry.currency)}` },
+                            { labelAr: 'إجمالي طرف الدائن', value: `${entry.credit.toLocaleString()} ${getCurrencySymbol(entry.currency)}` },
+                            { labelAr: 'حالة اعتماد السند', value: entry.status === 'approved' ? 'معتمد ومرحل للحسابات' : 'قيد المراجعة', highlight: true }
+                          ]
+                        }}
+                      />
+                      {entry.status === 'pending' && (
+                        <button 
+                          onClick={() => handleApproveEntry(entry)}
+                          className="text-[10px] font-black text-emerald-600 hover:bg-emerald-100 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 transition-colors shadow-3xs cursor-pointer whitespace-nowrap"
+                        >
+                          اعتماد القيد
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

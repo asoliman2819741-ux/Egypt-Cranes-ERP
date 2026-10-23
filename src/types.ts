@@ -99,6 +99,32 @@ export interface AccountNode {
   children?: AccountNode[];
 }
 
+export interface DocumentAttachment {
+  id: string;
+  name: string;
+  type: 'contract_scan' | 'invoice_scan' | 'general_scan' | string;
+  imageUrl: string;
+  scannedAt: string;
+  extractedText?: string;
+  extractedData?: {
+    documentNo?: string;
+    customerName?: string;
+    date?: string;
+    amount?: number;
+    tax?: number;
+    startDate?: string;
+    endDate?: string;
+    craneName?: string;
+    summary?: string;
+    items?: Array<{
+      description: string;
+      qty: number;
+      unitPrice: number;
+      total: number;
+    }>;
+  };
+}
+
 export interface InvoiceItem {
   id: string;
   description: string;
@@ -111,6 +137,7 @@ export interface Invoice {
   id: string;
   invoiceNo: string;
   date: string;
+  dueDate?: string;
   customerName: string;
   amount: number;
   tax: number;
@@ -119,6 +146,7 @@ export interface Invoice {
   items: InvoiceItem[];
   currency?: string;
   exchangeRate?: number;
+  attachments?: DocumentAttachment[];
 }
 
 export interface Contract {
@@ -131,6 +159,7 @@ export interface Contract {
   endDate: string;
   value: number;
   status: 'active' | 'completed' | 'suspended';
+  attachments?: DocumentAttachment[];
 }
 
 export interface MaintenanceOrder {

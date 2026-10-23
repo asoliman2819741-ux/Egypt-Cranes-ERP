@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CostCenter } from '../types';
 import { initialCostCenters } from '../mockData';
-import { Plus, Search, Building2, User, Target, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Building2, User, Target, AlertTriangle, ShieldAlert, Printer } from 'lucide-react';
+import ExportPDFButton from '../components/ExportPDFButton';
 
 export default function CostCenters({
   costCenters,
@@ -63,12 +64,40 @@ export default function CostCenters({
           <h1 className="text-2xl font-bold text-slate-900">مراكز التكلفة وحسابات المشاريع</h1>
           <p className="text-slate-500 mt-1 text-sm">مراقبة ميزانيات المشاريع، تكاليف تشغيل الأوناش ومصروفات الوقود والعمالة المباشرة</p>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2.5 bg-[#0F4C81] text-white font-bold text-sm rounded-xl hover:bg-[#0c3d67] transition-colors flex items-center gap-1.5 self-start"
-        >
-          <Plus className="w-5 h-5" /> إضافة مركز تكلفة جديد
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <ExportPDFButton
+            variant="outline"
+            titleAr="تصدير تقرير مراكز التكلفة PDF 📄"
+            titleEn="Export Cost Centers PDF"
+            exportOptions={{
+              titleAr: 'تقرير مراكز التكلفة ومشاريع التشغيل - إيجيبت كرينز',
+              titleEn: 'Cost Centers & Project Budgets Report - Egypt Cranes',
+              subtitleAr: `مراقبة الميزانيات المعتمدة والمصروف الفعلي لعدد (${filtered.length}) مركز تكلفة`,
+              filename: 'cost_centers_report',
+              columns: [
+                { headerAr: 'الرمز', accessor: 'code', align: 'center', width: '90px' },
+                { headerAr: 'اسم مركز التكلفة / المشروع', accessor: 'nameAr', align: 'right' },
+                { headerAr: 'المسؤول / المشرف', accessor: 'managerName', align: 'center', width: '130px' },
+                { headerAr: 'الميزانية المخصصة', accessor: (r: any) => `${Number(r.budget).toLocaleString()} ج.م`, align: 'left', width: '130px' },
+                { headerAr: 'المنصرف الفعلي', accessor: (r: any) => `${Number(r.usedBudget).toLocaleString()} ج.م`, align: 'left', width: '130px' },
+                { headerAr: 'نسبة الاستهلاك', accessor: (r: any) => `${((r.usedBudget / (r.budget || 1)) * 100).toFixed(1)}%`, align: 'center', width: '110px' }
+              ],
+              data: filtered,
+              summaryItems: [
+                { labelAr: 'إجمالي مراكز التكلفة', value: `${filtered.length} مراكز` },
+                { labelAr: 'إجمالي الميزانيات المعتمدة', value: `${filtered.reduce((a, b) => a + b.budget, 0).toLocaleString()} ج.م` },
+                { labelAr: 'إجمالي المنصرف الفعلي', value: `${filtered.reduce((a, b) => a + b.usedBudget, 0).toLocaleString()} ج.م`, highlight: true },
+                { labelAr: 'المتبقي من الميزانيات', value: `${(filtered.reduce((a, b) => a + b.budget, 0) - filtered.reduce((a, b) => a + b.usedBudget, 0)).toLocaleString()} ج.م` }
+              ]
+            }}
+          />
+          <button 
+            onClick={() => setShowAddForm(true)}
+            className="px-4 py-2.5 bg-[#0F4C81] text-white font-bold text-sm rounded-xl hover:bg-[#0c3d67] transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="w-5 h-5" /> إضافة مركز تكلفة جديد
+          </button>
+        </div>
       </div>
 
       {/* Search filter */}

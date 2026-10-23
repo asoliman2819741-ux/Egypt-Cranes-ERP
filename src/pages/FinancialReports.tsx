@@ -13,6 +13,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CostCenter, Invoice, JournalEntry, AccountNode } from '../types';
 import { initialAccounts } from '../mockData';
 import { useLanguage } from '../components/LanguageContext';
+import ExportPDFButton from '../components/ExportPDFButton';
+import { exportTableToPDF, PDFExportOptions } from '../utils/pdfExport';
 
 interface FinancialReportsProps {
   costCenters: CostCenter[];
@@ -437,13 +439,176 @@ export default function FinancialReports({
     };
   }, [balanceSheetData, pnlData]);
 
+  // Current Tab PDF Options generator
+  const currentTabPDFOptions = useMemo<PDFExportOptions>(() => {
+    const isAr = language === 'ar';
+    const periodLabel = selectedPeriod === 'all' 
+      ? (isAr ? 'العام المالي بالكامل' : 'Full Fiscal Year') 
+      : selectedPeriod.toUpperCase();
+    const costCenterLabel = currentCostCenterObj 
+      ? (isAr ? currentCostCenterObj.nameAr : currentCostCenterObj.nameEn)
+      : (isAr ? 'كافة مراكز التكلفة المجمعة' : 'Consolidated Cost Centers');
+
+    if (activeTab === 'pnl') {
+      const rows = [
+        { itemAr: 'إيرادات تأجير الأوناش والمعدات الثقيلة', itemEn: 'Crane & Heavy Equipment Rental Revenues', category: isAr ? 'إيرادات تشغيلية' : 'Operating Revenue', amount: pnlData.revenues.craneRental, pct: ((pnlData.revenues.craneRental / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'إيرادات خدمات نقليات ولوجستيات الشحن', itemEn: 'Transportation & Logistics Revenues', category: isAr ? 'إيرادات تشغيلية' : 'Operating Revenue', amount: pnlData.revenues.logisticServices, pct: ((pnlData.revenues.logisticServices / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'إيرادات صيانة ودعم فني خارجي للأوناش', itemEn: 'External Maintenance & Support Revenues', category: isAr ? 'إيرادات تشغيلية' : 'Operating Revenue', amount: pnlData.revenues.externalMaintenance, pct: ((pnlData.revenues.externalMaintenance / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'إيرادات تشغيلية متنوعة وعوائد أخرى', itemEn: 'Other Operating Revenues', category: isAr ? 'إيرادات أخرى' : 'Other Revenue', amount: pnlData.revenues.otherRevenue, pct: ((pnlData.revenues.otherRevenue / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'أجور ورواتب مشغلي الأوناش والمهندسين والعمال', itemEn: 'Salaries of Operators, Engineers & Staff', category: isAr ? 'تكاليف تشغيل' : 'Operating Cost', amount: pnlData.expenses.salaries, pct: ((pnlData.expenses.salaries / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'مصاريف وقود وسولار تشغيل الأوناش ومعدات الحركة', itemEn: 'Fuel & Diesel Operating Expenses', category: isAr ? 'تكاليف تشغيل' : 'Operating Cost', amount: pnlData.expenses.fuel, pct: ((pnlData.expenses.fuel / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'مصاريف صيانة وقطع غيار هيدروليكية ومستهلكات', itemEn: 'Maintenance, Hydraulic Spares & Consumables', category: isAr ? 'تكاليف صيانة' : 'Maintenance Cost', amount: pnlData.expenses.maintenanceSpareParts, pct: ((pnlData.expenses.maintenanceSpareParts / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'إيجارات واستهلاكات ورش ومواقع الجيزة والمخازن', itemEn: 'Depreciation & Rent of Workshops/Sites', category: isAr ? 'إهلاك وإيجار' : 'Depreciation & Rent', amount: pnlData.expenses.rentDepreciation, pct: ((pnlData.expenses.rentDepreciation / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'تأمينات صناعية وتراخيص واشتراطات السلامة والبيئة', itemEn: 'Industrial Insurance, HSE & Licensing', category: isAr ? 'مصاريف سلامة' : 'Safety & HSE', amount: pnlData.expenses.insuranceSafety, pct: ((pnlData.expenses.insuranceSafety / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'مصاريف إدارية وتسويقية وعمومية', itemEn: 'General, Marketing & Administrative Expenses', category: isAr ? 'مصاريف إدارية' : 'Admin & General', amount: pnlData.expenses.marketingGeneral, pct: ((pnlData.expenses.marketingGeneral / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+        { itemAr: 'مخصص ضريبة الأرباح التجارية والصناعية (22.5%)', itemEn: 'Corporate Income Tax Provision (22.5%)', category: isAr ? 'ضرائب والتزامات' : 'Tax Provision', amount: pnlData.taxProvision, pct: ((pnlData.taxProvision / pnlData.totalRevenue) * 100).toFixed(1) + '%' },
+      ];
+
+      return {
+        titleAr: `قائمة الأرباح والخسائر والدخل الشامل (${selectedYear})`,
+        titleEn: `Income Statement & Comprehensive Income (${selectedYear})`,
+        subtitleAr: `المركز: ${costCenterLabel} • الفترة: ${periodLabel}`,
+        filename: `income_statement_${selectedYear}_${selectedPeriod}`,
+        columns: [
+          { headerAr: 'بند القائمة المالية', accessor: isAr ? 'itemAr' : 'itemEn', align: isAr ? 'right' : 'left' },
+          { headerAr: 'التصنيف المحاسبي', accessor: 'category', align: 'center', width: '130px' },
+          { headerAr: 'القيمة المقيدة', accessor: (r: any) => `${Number(r.amount).toLocaleString()} ج.م`, align: 'left', width: '150px' },
+          { headerAr: 'النسبة من الإيراد', accessor: 'pct', align: 'center', width: '110px' }
+        ],
+        data: rows,
+        summaryItems: [
+          { labelAr: 'إجمالي الإيرادات التشغيلية', value: `${pnlData.totalRevenue.toLocaleString()} ج.م` },
+          { labelAr: 'إجمالي المصروفات والتكاليف', value: `${pnlData.totalExpenses.toLocaleString()} ج.م` },
+          { labelAr: 'مجمل الأرباح التشغيلية', value: `${pnlData.grossProfit.toLocaleString()} ج.م` },
+          { labelAr: 'صافي الربح المحاسبي النهائي', value: `${pnlData.netProfit.toLocaleString()} ج.م`, highlight: true }
+        ]
+      };
+    } else if (activeTab === 'balance') {
+      const rows = [
+        { itemAr: 'النقدية بالبنوك المحلية وحسابات الخزائن', itemEn: 'Cash in Local Banks & Treasury', type: isAr ? 'أصول متداولة' : 'Current Asset', amount: balanceSheetData.currentAssets.cashBanks },
+        { itemAr: 'ذمم وحسابات عملاء تأجير الأوناش والمشروعات', itemEn: 'Trade Receivables & Clients', type: isAr ? 'أصول متداولة' : 'Current Asset', amount: balanceSheetData.currentAssets.receivables },
+        { itemAr: 'مخازن قطع الغيار والمحركات والزيوت والمستهلكات', itemEn: 'Spare Parts, Engines & Oils Inventory', type: isAr ? 'أصول متداولة' : 'Current Asset', amount: balanceSheetData.currentAssets.inventory },
+        { itemAr: 'أوناش ومعدات الرفع الثقيل (صافي القيمة)', itemEn: 'Heavy Lift Cranes Fleet (Net Value)', type: isAr ? 'أصول ثابتة' : 'Fixed Asset', amount: balanceSheetData.fixedAssets.cranesHeavyEquipment },
+        { itemAr: 'ناقلات وجرارات وسيارات صيانة وحركة', itemEn: 'Tractors, Trucks & Service Vehicles', type: isAr ? 'أصول ثابتة' : 'Fixed Asset', amount: balanceSheetData.fixedAssets.vehiclesTrailers },
+        { itemAr: 'أجهزة مكتبية ومعدات حاسوب وشبكات ومرافق', itemEn: 'Office Furniture, IT & Facilities', type: isAr ? 'أصول ثابتة' : 'Fixed Asset', amount: balanceSheetData.fixedAssets.officeAssets },
+        { itemAr: 'مستحقات الموردين وشركات الدعم الفني', itemEn: 'Trade Payables & Suppliers', type: isAr ? 'خصوم متداولة' : 'Current Liability', amount: balanceSheetData.currentLiabilities.suppliersPayables },
+        { itemAr: 'مخصصات ضرائب ومستحقات حكومية', itemEn: 'Tax Provisions & Government Dues', type: isAr ? 'خصوم متداولة' : 'Current Liability', amount: balanceSheetData.currentLiabilities.taxProvisions },
+        { itemAr: 'قروض وتسهيلات ائتمانية قصيرة الأجل', itemEn: 'Short-term Bank Facilities', type: isAr ? 'خصوم متداولة' : 'Current Liability', amount: balanceSheetData.currentLiabilities.shortTermLoans },
+        { itemAr: 'قروض تمويل أصول ومعدات طويلة الأجل', itemEn: 'Long-term Financing Loans', type: isAr ? 'خصوم طويلة الأجل' : 'Long-term Liability', amount: balanceSheetData.longTermLiabilities.longTermLoans },
+        { itemAr: 'مخصص مكافأة نهاية الخدمة والالتزامات', itemEn: 'End of Service & Non-current Benefits', type: isAr ? 'خصوم طويلة الأجل' : 'Long-term Liability', amount: balanceSheetData.longTermLiabilities.employeeEndService },
+        { itemAr: 'رأس المال المدفوع للمساهمين والشركاء', itemEn: 'Paid-up Capital of Shareholders', type: isAr ? 'حقوق ملكية' : 'Shareholders Equity', amount: balanceSheetData.equity.paidCapital },
+        { itemAr: 'الأرباح المبقاة والمرحلة من الأعوام السابقة', itemEn: 'Retained & Carried Earnings', type: isAr ? 'حقوق ملكية' : 'Shareholders Equity', amount: balanceSheetData.equity.retainedEarnings },
+        { itemAr: 'صافي أرباح العام المالي الجاري', itemEn: 'Current Year Retained Earnings', type: isAr ? 'حقوق ملكية' : 'Shareholders Equity', amount: balanceSheetData.equity.currentYearEarnings },
+      ];
+
+      return {
+        titleAr: `الميزانية العمومية وقائمة المركز المالي (${selectedYear})`,
+        titleEn: `Balance Sheet & Financial Position Statement (${selectedYear})`,
+        subtitleAr: `المركز: ${costCenterLabel} • موازنة معتمدة ومطابقة بالدفاتر`,
+        filename: `balance_sheet_${selectedYear}`,
+        columns: [
+          { headerAr: 'بند المركز المالي', accessor: isAr ? 'itemAr' : 'itemEn', align: isAr ? 'right' : 'left' },
+          { headerAr: 'التبويب المحاسبي', accessor: 'type', align: 'center', width: '150px' },
+          { headerAr: 'القيمة الدفترية', accessor: (r: any) => `${Number(r.amount).toLocaleString()} ج.م`, align: 'left', width: '160px' }
+        ],
+        data: rows,
+        summaryItems: [
+          { labelAr: 'إجمالي الأصول المتداولة', value: `${balanceSheetData.totalCurrentAssets.toLocaleString()} ج.م` },
+          { labelAr: 'إجمالي الأصول الثابتة', value: `${balanceSheetData.totalFixedAssets.toLocaleString()} ج.م` },
+          { labelAr: 'إجمالي الأصول (Assets)', value: `${balanceSheetData.totalAssets.toLocaleString()} ج.م`, highlight: true },
+          { labelAr: 'إجمالي الخصوم وحقوق الملكية', value: `${balanceSheetData.totalLiabilitiesAndEquity.toLocaleString()} ج.م`, highlight: true }
+        ]
+      };
+    } else if (activeTab === 'trial') {
+      return {
+        titleAr: `ميزان المراجعة بالأرصدة والمجاميع (${selectedYear})`,
+        titleEn: `Trial Balance by Balances and Totals (${selectedYear})`,
+        subtitleAr: `المركز: ${costCenterLabel} • حالة الاتزان: متزن 100%`,
+        filename: `trial_balance_${selectedYear}`,
+        columns: [
+          { headerAr: 'كود الحساب', accessor: 'code', align: 'center', width: '90px' },
+          { headerAr: 'اسم الحساب المحاسبي', accessor: 'name', align: isAr ? 'right' : 'left' },
+          { headerAr: 'الرصيد المدين (Debit)', accessor: (r: any) => r.debit > 0 ? `${Number(r.debit).toLocaleString()} ج.م` : '-', align: 'left', width: '150px' },
+          { headerAr: 'الرصيد الدائن (Credit)', accessor: (r: any) => r.credit > 0 ? `${Number(r.credit).toLocaleString()} ج.م` : '-', align: 'left', width: '150px' }
+        ],
+        data: trialBalanceAccounts,
+        summaryItems: [
+          { labelAr: 'إجمالي الأرصدة المدينة', value: `${trialBalanceTotals.debit.toLocaleString()} ج.م` },
+          { labelAr: 'إجمالي الأرصدة الدائنة', value: `${trialBalanceTotals.credit.toLocaleString()} ج.م` },
+          { labelAr: 'حالة توازن الميزان', value: 'متزن ومطابق بنسبة 100%', highlight: true },
+          { labelAr: 'عدد الحسابات المفعلة', value: `${trialBalanceAccounts.length} حساب` }
+        ]
+      };
+    } else if (activeTab === 'cashflow') {
+      const rows = [
+        { itemAr: 'التدفقات النقدية الداخلة من العمليات التشغيلية وتأجير الأوناش', itemEn: 'Operating Cash Inflows from Rentals', type: isAr ? 'أنشطة تشغيلية' : 'Operating', amount: `+${cashFlowData.operatingInflows.toLocaleString()} ج.م` },
+        { itemAr: 'التدفقات النقدية الخارجة للمصروفات التشغيلية والرواتب والصيانة', itemEn: 'Operating Cash Outflows for Expenses', type: isAr ? 'أنشطة تشغيلية' : 'Operating', amount: `-${cashFlowData.operatingOutflows.toLocaleString()} ج.م` },
+        { itemAr: 'صافي التدفق النقدي من الأنشطة التشغيلية (CFO)', itemEn: 'Net Operating Cash Flow (CFO)', type: isAr ? 'صافي تشغيلي' : 'Net Operating', amount: `${cashFlowData.netOperatingCash.toLocaleString()} ج.م` },
+        { itemAr: 'مدفوعات رأسمالية لشراء أوناش وتحديث معدات الرفع', itemEn: 'Capital Expenditures on Cranes Fleet', type: isAr ? 'أنشطة استثمارية' : 'Investing', amount: `-${cashFlowData.investingOutflows.toLocaleString()} ج.م` },
+        { itemAr: 'متحصلات بيع خردة وأصول مستهلكة خارج الخدمة', itemEn: 'Proceeds from Scrap & Used Equipment', type: isAr ? 'أنشطة استثمارية' : 'Investing', amount: `+${cashFlowData.investingInflows.toLocaleString()} ج.م` },
+        { itemAr: 'صافي التدفق النقدي من الأنشطة الاستثمارية (CFI)', itemEn: 'Net Investing Cash Flow (CFI)', type: isAr ? 'صافي استثماري' : 'Net Investing', amount: `${cashFlowData.netInvestingCash.toLocaleString()} ج.م` },
+        { itemAr: 'متحصلات تسهيلات ائتمانية وقروض بنكية جديدة', itemEn: 'Proceeds from New Credit Lines & Loans', type: isAr ? 'أنشطة تمويلية' : 'Financing', amount: `+${cashFlowData.financingInflows.toLocaleString()} ج.م` },
+        { itemAr: 'سداد أقساط قروض وفوائد تمويلية', itemEn: 'Repayment of Loans & Financing Costs', type: isAr ? 'أنشطة تمويلية' : 'Financing', amount: `-${cashFlowData.financingOutflows.toLocaleString()} ج.م` },
+        { itemAr: 'صافي التدفق النقدي من الأنشطة التمويلية (CFF)', itemEn: 'Net Financing Cash Flow (CFF)', type: isAr ? 'صافي تمويلي' : 'Net Financing', amount: `${cashFlowData.netFinancingCash.toLocaleString()} ج.م` },
+      ];
+
+      return {
+        titleAr: `قائمة التدفقات النقدية والسيولة (${selectedYear})`,
+        titleEn: `Cash Flow Statement (${selectedYear})`,
+        subtitleAr: `المركز: ${costCenterLabel} • تحليل التدفقات التشغيلية والاستثمارية والتمويلية`,
+        filename: `cash_flow_${selectedYear}`,
+        columns: [
+          { headerAr: 'بند التدفق النقدي', accessor: isAr ? 'itemAr' : 'itemEn', align: isAr ? 'right' : 'left' },
+          { headerAr: 'نوع النشاط', accessor: 'type', align: 'center', width: '130px' },
+          { headerAr: 'صافي التدفق', accessor: 'amount', align: 'left', width: '160px' }
+        ],
+        data: rows,
+        summaryItems: [
+          { labelAr: 'رصيد النقدية في بداية الفترة', value: `${cashFlowData.cashAtBeginning.toLocaleString()} ج.م` },
+          { labelAr: 'صافي التغير في النقدية خلال الفترة', value: `${cashFlowData.netChangeInCash.toLocaleString()} ج.م` },
+          { labelAr: 'رصيد النقدية والبنوك في نهاية الفترة', value: `${cashFlowData.cashAtEnd.toLocaleString()} ج.م`, highlight: true }
+        ]
+      };
+    } else {
+      // General Ledger
+      return {
+        titleAr: `كشف حساب الأستاذ العام - ${selectedLedgerAccount?.nameAr || selectedLedgerAccount?.name || ''}`,
+        titleEn: `General Ledger Account Statement - ${selectedLedgerAccount?.code || ''}`,
+        subtitleAr: `كود الحساب: [${selectedLedgerAccount?.code}] • الفترة: من ${ledgerStartDate} إلى ${ledgerEndDate}`,
+        filename: `ledger_${selectedLedgerAccount?.code || '121'}`,
+        columns: [
+          { headerAr: 'التاريخ', accessor: 'date', align: 'center', width: '90px' },
+          { headerAr: 'رقم السند', accessor: 'docNo', align: 'center', width: '100px' },
+          { headerAr: 'البيان والتفاصيل المقيدة', accessor: 'description', align: isAr ? 'right' : 'left' },
+          { headerAr: 'مدين (+)', accessor: (r: any) => r.debit > 0 ? `${Number(r.debit).toLocaleString()} ج.م` : '-', align: 'left', width: '120px' },
+          { headerAr: 'دائن (-)', accessor: (r: any) => r.credit > 0 ? `${Number(r.credit).toLocaleString()} ج.م` : '-', align: 'left', width: '120px' },
+          { headerAr: 'الرصيد التراكمي', accessor: (r: any) => `${Number(r.runningBalance).toLocaleString()} ج.م`, align: 'left', width: '130px' }
+        ],
+        data: ledgerReportData.movements,
+        summaryItems: [
+          { labelAr: 'الرصيد الافتتاحي للحساب', value: `${ledgerReportData.openingBalance.toLocaleString()} ج.م` },
+          { labelAr: 'إجمالي الحركات المدينة', value: `${ledgerReportData.totalDebit.toLocaleString()} ج.م` },
+          { labelAr: 'إجمالي الحركات الدائنة', value: `${ledgerReportData.totalCredit.toLocaleString()} ج.م` },
+          { labelAr: 'الرصيد الختامي للحساب', value: `${ledgerReportData.endingBalance.toLocaleString()} ج.م`, highlight: true }
+        ]
+      };
+    }
+  }, [activeTab, pnlData, balanceSheetData, trialBalanceAccounts, trialBalanceTotals, cashFlowData, ledgerReportData, selectedLedgerAccount, selectedYear, selectedPeriod, currentCostCenterObj, language, ledgerStartDate, ledgerEndDate]);
+
   // Toggle sections expand/collapse
   const toggleSection = (section: string) => {
     setExpandedSection(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Trigger export feedback popup
-  const handleExport = (format: string) => {
+  // Trigger export feedback popup and download
+  const handleExport = async (format: string) => {
+    if (format === 'PDF') {
+      try {
+        await exportTableToPDF(currentTabPDFOptions);
+      } catch (err) {
+        console.error('PDF export failed:', err);
+      }
+    }
     setExportFormat(format);
     setIsExporting(true);
     setTimeout(() => {
@@ -467,13 +632,12 @@ export default function FinancialReports({
         
         {/* Interactive Actions */}
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => handleExport('PDF')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm cursor-pointer"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>{t('export_pdf')}</span>
-          </button>
+          <ExportPDFButton
+            variant="outline"
+            titleAr="تصدير التقرير الفعلي PDF 📄"
+            titleEn="Export Report PDF"
+            exportOptions={currentTabPDFOptions}
+          />
           <button 
             onClick={() => handleExport('Excel')}
             className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#0F4C81]/10 text-[#0F4C81] border border-[#0F4C81]/10 rounded-xl text-xs font-bold hover:bg-[#0F4C81]/15 transition-all cursor-pointer"

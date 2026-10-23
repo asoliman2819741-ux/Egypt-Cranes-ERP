@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { MaintenanceOrder, Crane, LubricationTask, SparePartsRequest, InventoryItem, AssetMaintenanceBudget } from '../types';
-import { initialMaintenanceOrders, initialAssetBudgets } from '../mockData';
-import { Plus, Search, Wrench, Calendar, DollarSign, PenTool, CheckCircle, CheckCircle2, Clock, Eye, Trash2, Brain, Bell, BarChart2, Camera, AlertTriangle, Droplets, Package, Check, X, ShieldCheck, Edit3 } from 'lucide-react';
+import { MaintenanceOrder, Crane, LubricationTask, SparePartsRequest, InventoryItem, AssetMaintenanceBudget, TaskAssignment } from '../types';
+import { initialMaintenanceOrders, initialAssetBudgets, initialTasks } from '../mockData';
+import { Plus, Search, Wrench, Calendar, DollarSign, PenTool, CheckCircle, CheckCircle2, Clock, Eye, Trash2, Brain, Bell, BarChart2, Camera, AlertTriangle, Droplets, Package, Check, X, ShieldCheck, Edit3, Columns } from 'lucide-react';
 import PredictiveMaintenance from '../components/PredictiveMaintenance';
 import MaintenanceNotifications from '../components/MaintenanceNotifications';
 import MaintenanceDashboard from '../components/MaintenanceDashboard';
 import FaultCameraCapture from '../components/FaultCameraCapture';
+import TaskKanbanBoard from '../components/TaskKanbanBoard';
 
 interface MaintenanceProps {
   cranes: Crane[];
@@ -37,6 +38,9 @@ export default function Maintenance({
   onAddSparePartsRequest,
   onApproveSparePartsRequest,
   inventoryItems = [],
+  tasks = [],
+  onAddTask,
+  onUpdateTask,
   assetBudgets,
   onUpdateAssetBudget,
   onAddAssetBudget
@@ -45,7 +49,25 @@ export default function Maintenance({
   const [search, setSearch] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<MaintenanceOrder | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'predictive' | 'notifications' | 'dashboard' | 'lubrication' | 'spareParts' | 'assetBudgets'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'orders' | 'kanban' | 'predictive' | 'notifications' | 'dashboard' | 'lubrication' | 'spareParts' | 'assetBudgets'>('kanban');
+
+  // Local Tasks State & Sync
+  const [localTasks, setLocalTasks] = useState<TaskAssignment[]>(initialTasks);
+  const tasksList = tasks && tasks.length > 0 ? tasks : localTasks;
+
+  const handleTaskAdd = (newTask: TaskAssignment) => {
+    if (onAddTask) {
+      onAddTask(newTask);
+    }
+    setLocalTasks(prev => [newTask, ...prev]);
+  };
+
+  const handleTaskUpdate = (id: string, updated: Partial<TaskAssignment>) => {
+    if (onUpdateTask) {
+      onUpdateTask(id, updated);
+    }
+    setLocalTasks(prev => prev.map(t => t.id === id ? { ...t, ...updated } : t));
+  };
 
   // Asset Budgets State & Modals
   const [localBudgets, setLocalBudgets] = useState<AssetMaintenanceBudget[]>(assetBudgets || initialAssetBudgets);
@@ -432,6 +454,24 @@ export default function Maintenance({
 
         <button
           type="button"
+          onClick={() => setActiveTab('kanban')}
+          className={`pb-3 px-6 text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'kanban'
+              ? 'border-[#0F4C81] text-[#0F4C81]'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Columns className="w-4 h-4 text-sky-600" />
+          <span className="flex items-center gap-1.5">
+            كانبان المهام (Kanban Board) 📋
+            <span className="bg-sky-100 dark:bg-sky-950 text-[#0F4C81] dark:text-sky-300 text-[10px] px-2 py-0.5 rounded-full font-black border border-sky-200 dark:border-sky-800">
+              {tasksList.length}
+            </span>
+          </span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('orders')}
           className={`pb-3 px-6 text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
             activeTab === 'orders'
@@ -543,6 +583,14 @@ export default function Maintenance({
           onUpdateCraneStatus={onUpdateCraneStatus}
           cranesHours={cranesHours}
           onAddPredictiveOrder={handleSelectPredictiveOrder}
+        />
+      ) : activeTab === 'kanban' ? (
+        <TaskKanbanBoard
+          tasks={tasksList}
+          onAddTask={handleTaskAdd}
+          onUpdateTask={handleTaskUpdate}
+          cranes={cranes}
+          maintenanceOrders={orders}
         />
       ) : activeTab === 'predictive' ? (
         <PredictiveMaintenance

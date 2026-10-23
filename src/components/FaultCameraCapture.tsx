@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, RotateCw, X, Image, UploadCloud, CheckCircle, RefreshCw, VideoOff } from 'lucide-react';
 
 interface FaultCameraCaptureProps {
@@ -9,6 +9,7 @@ interface FaultCameraCaptureProps {
 
 export default function FaultCameraCapture({ onImageCaptured, initialImage, onClear }: FaultCameraCaptureProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(initialImage || null);
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
@@ -19,24 +20,38 @@ export default function FaultCameraCapture({ onImageCaptured, initialImage, onCl
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Keep streamRef updated
+  useEffect(() => {
+    streamRef.current = stream;
+  }, [stream]);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setStream(null);
+    setIsCameraActive(false);
+  }, []);
+
   useEffect(() => {
     if (initialImage) {
       setCapturedImage(initialImage);
     }
   }, [initialImage]);
 
-  // Handle cleanup of stream when unmounting or stopping camera
+  // Handle cleanup of stream when unmounting
   useEffect(() => {
     return () => {
       stopCamera();
     };
-  }, [stream]);
+  }, [stopCamera]);
 
   const startCamera = async () => {
     setError(null);
     setIsCameraActive(true);
     try {
-      if (stream) {
+      if (streamRef.current) {
         stopCamera();
       }
 
@@ -50,6 +65,7 @@ export default function FaultCameraCapture({ onImageCaptured, initialImage, onCl
       };
 
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -62,14 +78,6 @@ export default function FaultCameraCapture({ onImageCaptured, initialImage, onCl
       setError('تعذر الوصول إلى الكاميرا. يرجى التحقق من الصلاحيات أو استخدام خيار رفع الصور.');
       setIsCameraActive(false);
     }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setIsCameraActive(false);
   };
 
   const toggleCameraFacing = () => {

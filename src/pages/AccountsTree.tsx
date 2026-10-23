@@ -5,9 +5,10 @@ import {
   Folder, FolderOpen, Plus, Search, Edit2, Trash2, Layers, 
   ChevronDown, AlertCircle, CheckCircle2, Landmark, ShieldCheck, 
   Wallet, TrendingUp, HelpCircle, FileSpreadsheet, ListCollapse, FolderPlus,
-  UploadCloud, X, Database
+  UploadCloud, X, Database, Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ExportPDFButton from '../components/ExportPDFButton';
 
 interface TreeNodeProps {
   key?: string;
@@ -515,6 +516,33 @@ export default function AccountsTree() {
 
   const stats = getStats();
 
+  const flattenedAccounts = React.useMemo(() => {
+    const list: Array<{ code: string; nameAr: string; typeAr: string; level: number; balance: number }> = [];
+    const typeLabels: Record<string, string> = {
+      assets: 'أصول (Assets)',
+      liabilities: 'خصوم (Liabilities)',
+      equity: 'حقوق ملكية (Equity)',
+      revenues: 'إيرادات (Revenues)',
+      expenses: 'مصروفات (Expenses)'
+    };
+    const traverse = (node: AccountNode, level: number) => {
+      list.push({
+        code: node.code,
+        nameAr: `${'— '.repeat(Math.max(0, level - 1))}${node.nameAr}`,
+        typeAr: typeLabels[node.type] || node.type,
+        level,
+        balance: node.balance || 0
+      });
+      if (node.children && node.children.length > 0) {
+        node.children.forEach(child => traverse(child, level + 1));
+      }
+    };
+    if (rootAccount.children) {
+      rootAccount.children.forEach(c => traverse(c, 1));
+    }
+    return list;
+  }, [rootAccount]);
+
   const handleOpenAdd = (parentNode: AccountNode) => {
     setSelectedParent(parentNode);
     // Auto-generate code based on parent
@@ -737,6 +765,33 @@ export default function AccountsTree() {
         </div>
         
         <div className="flex flex-wrap gap-2 justify-end">
+          <ExportPDFButton
+            variant="outline"
+            titleAr="تصدير شجرة الحسابات PDF 📄"
+            titleEn="Export Chart of Accounts PDF"
+            exportOptions={{
+              titleAr: 'دليل شجرة الحسابات المالية الموحد - إيجيبت كرينز',
+              titleEn: 'Standard Unified Chart of Accounts - Egypt Cranes',
+              subtitleAr: `تقرير هيكل الحسابات الرسمي لعدد (${stats.totalNodes}) حساب مالي موثق`,
+              filename: 'chart_of_accounts_tree',
+              columns: [
+                { headerAr: 'كود الحساب', accessor: 'code', align: 'center', width: '110px' },
+                { headerAr: 'اسم الحساب المحاسبي', accessor: 'nameAr', align: 'right' },
+                { headerAr: 'التبويب المالي', accessor: 'typeAr', align: 'center', width: '140px' },
+                { headerAr: 'المستوى', accessor: (r: any) => `مستوى ${r.level}`, align: 'center', width: '80px' },
+                { headerAr: 'الرصيد الدفتري الحالي', accessor: (r: any) => `${Number(r.balance).toLocaleString()} ج.م`, align: 'left', width: '150px' }
+              ],
+              data: flattenedAccounts,
+              summaryItems: [
+                { labelAr: 'إجمالي الحسابات المسجلة', value: `${stats.totalNodes} حساب` },
+                { labelAr: 'مجموع الأصول (Assets)', value: `${stats.assetsSum.toLocaleString()} ج.م`, highlight: true },
+                { labelAr: 'مجموع الخصوم (Liabilities)', value: `${stats.liabilitiesSum.toLocaleString()} ج.م` },
+                { labelAr: 'مجموع حقوق الملكية (Equity)', value: `${stats.equitySum.toLocaleString()} ج.م` },
+                { labelAr: 'مجموع الإيرادات', value: `${stats.revenuesSum.toLocaleString()} ج.م` },
+                { labelAr: 'مجموع المصروفات', value: `${stats.expensesSum.toLocaleString()} ج.م` }
+              ]
+            }}
+          />
           <button 
             onClick={() => setShowImportModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white transition-all rounded-xl text-xs font-black shadow-md hover:shadow-lg hover:scale-[1.01] cursor-pointer"

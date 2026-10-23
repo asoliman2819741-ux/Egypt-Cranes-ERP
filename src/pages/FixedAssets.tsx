@@ -5,9 +5,10 @@ import {
   Building2, Plus, Search, Archive, AlertTriangle, ArrowUpRight, 
   ArrowDownRight, Landmark, Wrench, MapPin, Calculator, Calendar, 
   DollarSign, Clock, Settings, X, CheckCircle2, ChevronRight, RefreshCw, Trash2,
-  QrCode, Camera, Printer
+  QrCode, Camera, Printer, FileText
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ExportPDFButton from '../components/ExportPDFButton';
 
 interface FixedAssetsProps {
   fixedAssets: FixedAsset[];
@@ -343,13 +344,44 @@ export default function FixedAssets({
           </div>
           <p className="text-slate-500 mt-1 text-sm font-semibold">متابعة الأصول التشغيلية والإدارية غير الأوناش، واحتساب إهلاكاتها، وسجل مواقعها وصياناتها</p>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="px-5 py-2.5 bg-[#0F4C81] text-white font-bold text-sm rounded-xl hover:bg-[#0c3d67] transition-all flex items-center gap-2 cursor-pointer shadow-md hover:shadow-lg hover:scale-[1.01] self-start md:self-center"
-        >
-          <Plus className="w-5 h-5 text-[#F7941D]" /> 
-          <span>تسجيل أصل ثابت جديد</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start md:self-center">
+          <ExportPDFButton
+            variant="outline"
+            titleAr="تصدير سجل الأصول PDF 📄"
+            titleEn="Export Assets Register PDF"
+            exportOptions={{
+              titleAr: 'سجل الأصول الثابتة الشامل وحسابات الإهلاك والقيمة الدفترية',
+              titleEn: 'Comprehensive Fixed Assets Register & Depreciation Schedule',
+              subtitleAr: `تقرير شامل لعدد (${filteredAssets.length}) أصل ثابت مصنف ومسجل بالدفاتر`,
+              filename: 'fixed_assets_register_report',
+              columns: [
+                { headerAr: 'كود الأصل', accessor: 'code', align: 'center', width: '90px' },
+                { headerAr: 'اسم الأصل والبيان', accessor: 'nameAr', align: 'right' },
+                { headerAr: 'التصنيف', accessor: (row: FixedAsset) => categoryLabels[row.category] || row.category, align: 'center' },
+                { headerAr: 'تاريخ الشراء', accessor: 'purchaseDate', align: 'center' },
+                { headerAr: 'طريقة الإهلاك', accessor: (row: FixedAsset) => row.depreciationMethod === 'straight_line' ? 'قسط ثابت' : `متناقص (${row.decliningRate}%)`, align: 'center' },
+                { headerAr: 'تكلفة الاقتناء', accessor: (row: FixedAsset) => `${row.purchaseCost.toLocaleString()} ج.م`, align: 'right' },
+                { headerAr: 'الإهلاك المتراكم', accessor: (row: FixedAsset) => `${row.accumulatedDepreciation.toLocaleString()} ج.م`, align: 'right' },
+                { headerAr: 'صافي القيمة الدفترية', accessor: (row: FixedAsset) => `${row.currentValue.toLocaleString()} ج.م`, align: 'right' },
+                { headerAr: 'موقع التواجد الحالي', accessor: 'location', align: 'right' }
+              ],
+              data: filteredAssets,
+              summaryItems: [
+                { labelAr: 'إجمالي تكلفة اقتناء الأصول', value: `${kpis.totalCost.toLocaleString()} ج.م` },
+                { labelAr: 'إجمالي مجمع الإهلاك المتراكم', value: `${kpis.totalAccumDep.toLocaleString()} ج.م` },
+                { labelAr: 'صافي القيمة الدفترية النشطة', value: `${kpis.totalBookVal.toLocaleString()} ج.م`, highlight: true },
+                { labelAr: 'إجمالي عدد الأصول المسجلة', value: `${filteredAssets.length} أصل` }
+              ]
+            }}
+          />
+          <button 
+            onClick={() => setShowAddForm(true)}
+            className="px-5 py-2.5 bg-[#0F4C81] text-white font-bold text-xs sm:text-sm rounded-xl hover:bg-[#0c3d67] transition-all flex items-center gap-2 cursor-pointer shadow-md hover:shadow-lg hover:scale-[1.01]"
+          >
+            <Plus className="w-5 h-5 text-[#F7941D]" /> 
+            <span>تسجيل أصل ثابت جديد</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}
@@ -529,9 +561,37 @@ export default function FixedAssets({
               {/* Selected Asset Header */}
               <div className="border-b pb-4 space-y-1.5">
                 <div className="flex justify-between items-start">
-                  <span className="font-mono text-xs font-black text-[#0F4C81] bg-blue-50 px-2 py-0.5 rounded-lg border">
-                    {selectedAsset.code}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-black text-[#0F4C81] bg-blue-50 px-2 py-0.5 rounded-lg border">
+                      {selectedAsset.code}
+                    </span>
+                    <ExportPDFButton
+                      variant="ghost"
+                      size="sm"
+                      titleAr="تصدير بطاقة الأصل PDF"
+                      titleEn="Export Asset Card PDF"
+                      exportOptions={{
+                        titleAr: `بطاقة الأصل الثابت وجدول الإهلاك - ${selectedAsset.nameAr}`,
+                        titleEn: `Asset Card & Depreciation Schedule - ${selectedAsset.code}`,
+                        subtitleAr: `موقع التواجد: ${selectedAsset.location} • طريقة الحساب: ${selectedAsset.depreciationMethod === 'straight_line' ? 'قسط ثابت' : 'قسط متناقص'}`,
+                        filename: `asset_${selectedAsset.code}_depreciation`,
+                        columns: [
+                          { headerAr: 'السنة المالية', accessor: (row: any) => `${row.year}${row.year === 2026 ? ' (الحالية)' : ''}`, align: 'center' },
+                          { headerAr: 'قسط الإهلاك السنوي', accessor: (row: any) => `${row.depreciationExpense.toLocaleString('ar-EG', {maximumFractionDigits: 0})} ج.م`, align: 'left' },
+                          { headerAr: 'الإهلاك المتراكم', accessor: (row: any) => `${row.accumulatedDepreciation.toLocaleString('ar-EG', {maximumFractionDigits: 0})} ج.م`, align: 'left' },
+                          { headerAr: 'صافي القيمة الدفترية المتبقية', accessor: (row: any) => `${row.bookValue.toLocaleString('ar-EG', {maximumFractionDigits: 0})} ج.م`, align: 'left' }
+                        ],
+                        data: scheduleData,
+                        summaryItems: [
+                          { labelAr: 'كود الأصل', value: selectedAsset.code },
+                          { labelAr: 'تكلفة الاقتناء', value: `${selectedAsset.purchaseCost.toLocaleString()} ج.م` },
+                          { labelAr: 'العمر الإنتاجي', value: `${selectedAsset.usefulLife} سنوات` },
+                          { labelAr: 'القيمة التخريدية', value: `${selectedAsset.salvageValue.toLocaleString()} ج.م` },
+                          { labelAr: 'صافي القيمة الحالية بالدفاتر', value: `${selectedAsset.currentValue.toLocaleString()} ج.م`, highlight: true }
+                        ]
+                      }}
+                    />
+                  </div>
                   <button 
                     onClick={() => {
                       if (confirm(`هل أنت متأكد من رغبتك في حذف الأصل الثابت [${selectedAsset.nameAr}]؟`)) {

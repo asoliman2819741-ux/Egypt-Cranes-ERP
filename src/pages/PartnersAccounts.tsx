@@ -6,6 +6,7 @@ import {
   Coins, Check, RefreshCw, Layers, ShieldCheck, Landmark
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ExportPDFButton from '../components/ExportPDFButton';
 
 interface PartnersAccountsProps {
   currentUser: User;
@@ -284,13 +285,39 @@ export default function PartnersAccounts({ currentUser, onAddNotification }: Par
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddPartnerModal(true)}
-          className="px-4 py-2.5 bg-[#0F4C81] hover:bg-[#0c3c66] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>{lang === 'ar' ? 'تسجيل شريك تجاري جديد (عميل / مورد)' : 'Register New Commercial Partner'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportPDFButton
+            variant="outline"
+            titleAr="تصدير سجل الشركاء PDF 📄"
+            titleEn="Export Partners Register PDF"
+            exportOptions={{
+              titleAr: 'سجل الشركاء التجاريين (العملاء والموردين) - إيجيبت كرينز',
+              titleEn: 'Commercial Partners Register - Egypt Cranes',
+              subtitleAr: `تقرير إجمالي لأرصدة وبيانات (${filteredPartners.length}) شريك تجاري معتمد`,
+              filename: 'partners_register',
+              columns: [
+                { headerAr: 'اسم الشريك / المؤسسة', accessor: 'name', align: 'right' },
+                { headerAr: 'النوع', accessor: (r: any) => r.type === 'customer' ? 'عميل' : 'مورد', align: 'center', width: '90px' },
+                { headerAr: 'الهاتف', accessor: 'phone', align: 'center', width: '120px' },
+                { headerAr: 'السجل التجاري', accessor: (r: any) => r.commercialRegister || '-', align: 'center', width: '120px' },
+                { headerAr: 'الرصيد الدفتري (ج.م)', accessor: (r: any) => `${Number(r.balance).toLocaleString()} ج.م`, align: 'left', width: '150px' }
+              ],
+              data: filteredPartners,
+              summaryItems: [
+                { labelAr: 'إجمالي الشركاء', value: `${filteredPartners.length} شريك` },
+                { labelAr: 'إجمالي مستحقات العملاء (لنا)', value: `${filteredPartners.filter(p => p.type === 'customer' && p.balance > 0).reduce((a, b) => a + b.balance, 0).toLocaleString()} ج.م`, highlight: true },
+                { labelAr: 'إجمالي مستحقات الموردين (علينا)', value: `${Math.abs(filteredPartners.filter(p => p.type === 'supplier' && p.balance < 0).reduce((a, b) => a + b.balance, 0)).toLocaleString()} ج.م` }
+              ]
+            }}
+          />
+          <button
+            onClick={() => setShowAddPartnerModal(true)}
+            className="px-4 py-2.5 bg-[#0F4C81] hover:bg-[#0c3c66] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{lang === 'ar' ? 'تسجيل شريك تجاري جديد (عميل / مورد)' : 'Register New Commercial Partner'}</span>
+          </button>
+        </div>
       </div>
 
       {/* DASHBOARD SPLIT-PANE */}
@@ -453,14 +480,33 @@ export default function PartnersAccounts({ currentUser, onAddNotification }: Par
                     <span>كشف حساب الأستاذ المساعد التفصيلي (Ledger Account Statement):</span>
                   </h3>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => alert(lang === 'ar' ? 'جاري تصدير كشف الحساب لـ PDF المعتمد...' : 'Exporting Statement of Account to PDF...')}
-                      className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-[#0F4C81] hover:bg-slate-50 transition-colors flex items-center gap-1 text-[10px] font-black cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">طباعة الكشف</span>
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <ExportPDFButton
+                      size="sm"
+                      variant="outline"
+                      titleAr="طباعة كشف الحساب PDF 📄"
+                      titleEn="Print Statement PDF"
+                      exportOptions={{
+                        titleAr: `كشف حساب أستاذ مساعد - ${selectedPartner.name}`,
+                        titleEn: `Subsidiary Ledger Account Statement - ${selectedPartner.name}`,
+                        subtitleAr: `نوع الشريك: ${selectedPartner.type === 'customer' ? 'عميل' : 'مورد'} • السجل: ${selectedPartner.commercialRegister || '-'} • الضريبي: ${selectedPartner.taxNumber || '-'}`,
+                        filename: `statement_${selectedPartner.id}_${selectedPartner.name.replace(/\s+/g, '_')}`,
+                        columns: [
+                          { headerAr: 'تاريخ الحركة', accessor: 'date', align: 'center', width: '90px' },
+                          { headerAr: 'المرجع والنوع', accessor: 'reference', align: 'center', width: '110px' },
+                          { headerAr: 'البيان والتفاصيل', accessor: 'description', align: 'right' },
+                          { headerAr: 'مدين (+)', accessor: (r: any) => r.debit > 0 ? `${Number(r.debit).toLocaleString()} ج.م` : '-', align: 'left', width: '120px' },
+                          { headerAr: 'دائن (-)', accessor: (r: any) => r.credit > 0 ? `${Number(r.credit).toLocaleString()} ج.م` : '-', align: 'left', width: '120px' },
+                          { headerAr: 'الرصيد التراكمي', accessor: (r: any) => `${Number(r.runningBalance).toLocaleString()} ج.م`, align: 'left', width: '130px' }
+                        ],
+                        data: partnerStatement,
+                        summaryItems: [
+                          { labelAr: 'إجمالي الحركات المدينة', value: `${partnerStatement.reduce((a, b) => a + b.debit, 0).toLocaleString()} ج.م` },
+                          { labelAr: 'إجمالي الحركات الدائنة', value: `${partnerStatement.reduce((a, b) => a + b.credit, 0).toLocaleString()} ج.م` },
+                          { labelAr: 'الرصيد النهائي المستحق', value: `${selectedPartner.balance.toLocaleString()} ج.م`, highlight: true }
+                        ]
+                      }}
+                    />
                     <button
                       onClick={() => alert(lang === 'ar' ? 'تم تنزيل الكشف لـ Excel بنجاح.' : 'Downloaded Excel datasheet successfully.')}
                       className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-slate-50 transition-colors flex items-center gap-1 text-[10px] font-black cursor-pointer"

@@ -147,6 +147,7 @@ export const initialInvoices: Invoice[] = [
     id: 'inv1',
     invoiceNo: 'INV-2026-101',
     date: '2026-07-01',
+    dueDate: '2026-07-31',
     customerName: 'المقاولون العرب (عثمان أحمد عثمان)',
     amount: 391304.35,
     tax: 58695.65,
@@ -160,6 +161,7 @@ export const initialInvoices: Invoice[] = [
     id: 'inv2',
     invoiceNo: 'INV-2026-102',
     date: '2026-07-04',
+    dueDate: '2026-08-01',
     customerName: 'أوراسكوم للإنشاءات وصناعات حديد السويس',
     amount: 1043478.26,
     tax: 156521.74,
@@ -173,6 +175,7 @@ export const initialInvoices: Invoice[] = [
     id: 'inv3',
     invoiceNo: 'INV-2026-103',
     date: '2026-07-08',
+    dueDate: '2026-08-15',
     customerName: 'السويدي إلكتريك - مشروعات طاقة الرياح بخليج السويس',
     amount: 650000,
     tax: 97500,
@@ -180,6 +183,50 @@ export const initialInvoices: Invoice[] = [
     status: 'unpaid',
     items: [
       { id: 'item3', description: 'شحن ونقل وتثبيت أجزاء توربينات هواء عملاقة بواسطة الأوناش التخصصية', qty: 1, unitPrice: 650000, total: 650000 }
+    ]
+  },
+  {
+    id: 'inv4',
+    invoiceNo: 'INV-2026-104',
+    date: '2026-06-15',
+    dueDate: '2026-07-15',
+    customerName: 'بتروجيت للخدمات البترولية والمستودعات',
+    amount: 800000,
+    tax: 112000,
+    total: 912000,
+    status: 'unpaid',
+    items: [
+      { id: 'item4', description: 'تأجير أوناش هيدروليكية بمشروع توسعات حقل ظهر للغاز بفرع بورسعيد', qty: 1, unitPrice: 800000, total: 800000 }
+    ]
+  },
+  {
+    id: 'inv5',
+    invoiceNo: 'INV-2026-105',
+    date: '2026-07-20',
+    dueDate: '2026-08-20',
+    customerName: 'هيئة ميناء الإسكندرية - أرصفة الحاويات',
+    amount: 50000,
+    tax: 7000,
+    total: 57000,
+    currency: 'USD',
+    exchangeRate: 48.5,
+    status: 'unpaid',
+    items: [
+      { id: 'item5', description: 'خدمات صيانة وتفريغ سفن شحن عملاقة بميناء الإسكندرية الدولي (USD)', qty: 1, unitPrice: 50000, total: 50000 }
+    ]
+  },
+  {
+    id: 'inv6',
+    invoiceNo: 'INV-2026-106',
+    date: '2026-08-01',
+    dueDate: '2026-08-30',
+    customerName: 'المقاولون العرب (عثمان أحمد عثمان)',
+    amount: 320000,
+    tax: 44800,
+    total: 364800,
+    status: 'paid',
+    items: [
+      { id: 'item6', description: 'صيانة طارئة ورفع كمرات خرسانية بمحور 26 يوليو - مشروع الجيزة', qty: 1, unitPrice: 320000, total: 320000 }
     ]
   }
 ];
@@ -202,6 +249,13 @@ export const initialInventoryItems: InventoryItem[] = [
   { id: 'itm3', code: 'EC-INV-SLR-CL', nameAr: 'براميل شحم تالكو ثقيل هيدروليكس مقاوم للملوحة', category: 'زيوت ومواد كيميائية', unit: 'برميل', currentQty: 40, minQty: 15, unitPrice: 3200, warehouseName: 'مخزن الزيوت والمستهلكات السريعة' },
   { id: 'itm4', code: 'EC-INV-WRE-18', nameAr: 'حبل واير فولاذي مضاد للالتواء سمك ١٨ مم حمولة عالية', category: 'حبال وأسلاك الرفع', unit: 'متر', currentQty: 600, minQty: 200, unitPrice: 280, warehouseName: 'المخزن الرئيسي - الجيزة ورشة' },
   { id: 'itm5', code: 'EC-INV-SNSR-AN', nameAr: 'حساس قياس زاوية البوم والميل الأوتوماتيكي', category: 'حساسات وأجهزة إلكترونية', unit: 'وحدة', currentQty: 2, minQty: 5, unitPrice: 16500, warehouseName: 'مخزن المستلزمات والقطع الدقيقة' },
+  { id: 'itm6', code: 'EC-INV-TOL-TRQ', nameAr: 'مفتاح عزم هيدروليكي عالي الدقة للربط حتى 3000 نيوتن', category: 'عِدد وأدوات ورشة', unit: 'طقم', currentQty: 3, minQty: 2, unitPrice: 28000, warehouseName: 'ورشة ومستودع العاشر من رمضان' },
+  { id: 'itm7', code: 'EC-INV-ELE-ALT', nameAr: 'دينامو شحن 24 فولت ثقيل لمحركات مرسيدس OM502', category: 'قطع كهربائية ومحركات', unit: 'قطعة', currentQty: 4, minQty: 6, unitPrice: 9400, warehouseName: 'مستودع فرع الإسكندرية وميناء الدخيلة' },
+  { id: 'itm8', code: 'EC-INV-HYD-VLV', nameAr: 'صمام تناسبي هيدروليكي Proportional Valve ليبهير', category: 'قطع غيار هيدروليكية', unit: 'وحدة', currentQty: 3, minQty: 4, unitPrice: 24500, warehouseName: 'مخزن المستلزمات والقطع الدقيقة' },
+  { id: 'itm9', code: 'EC-INV-TIR-445', nameAr: 'إطارات أوناش مقاس 16.00R25 حمولة 100 طن بريدجستون', category: 'إطارات وجنازير', unit: 'إطار', currentQty: 8, minQty: 10, unitPrice: 38000, warehouseName: 'المخزن الرئيسي - الجيزة ورشة' },
+  { id: 'itm10', code: 'EC-INV-TOL-PRS', nameAr: 'جهاز فحص وقياس ضغوط الهيدروليك الرقمي 700 بار', category: 'عِدد وأدوات ورشة', unit: 'جهاز', currentQty: 5, minQty: 3, unitPrice: 14200, warehouseName: 'مستودع موقع السويس والعين السخنة' },
+  { id: 'itm11', code: 'EC-INV-OIL-H46', nameAr: 'زيت هيدروليك تيتان هيدرو 46 ألماني فائق التحمل', category: 'زيوت ومواد كيميائية', unit: 'برميل', currentQty: 18, minQty: 20, unitPrice: 4600, warehouseName: 'مخزن الزيوت والمستهلكات السريعة' },
+  { id: 'itm12', code: 'EC-INV-WRE-SHK', nameAr: 'شناكل رفع ومزاليج هافي ديوتي كروكي حمولة 55 طن', category: 'حبال وأسلاك الرفع', unit: 'قطعة', currentQty: 16, minQty: 8, unitPrice: 2200, warehouseName: 'ورشة ومستودع العاشر من رمضان' },
 ];
 
 export const initialTenders: Tender[] = [
@@ -716,6 +770,53 @@ export const initialTasks: TaskAssignment[] = [
     dueDate: '2026-07-29',
     priority: 'high',
     status: 'pending'
+  },
+  {
+    id: 'task-104',
+    taskNo: 'TSK-2026-004',
+    title: 'تغيير فلاتر الزيت والديزل وطلمبة الوقود للونش Grove GMK 5220',
+    description: 'إجراء الصيانة الدورية بعد 500 ساعة تشغيل وتغيير الفلاتر والأطقم الوقائية كاملة.',
+    assignedToEmpId: 'emp3',
+    assignedToEmpName: 'ياسر حسن',
+    assignedBy: 'م. إبراهيم فوزي (إدارة الصيانة)',
+    relatedType: 'maintenance',
+    relatedEntityId: 'c2',
+    relatedEntityName: 'ونش Grove GMK 5220',
+    dueDate: '2026-08-10',
+    priority: 'high',
+    status: 'pending'
+  },
+  {
+    id: 'task-105',
+    taskNo: 'TSK-2026-005',
+    title: 'استبدال واير الفولاذ الرئيسي وتفتيش البكرات للونش KOBELCO 250T',
+    description: 'تركيب واير سلبة جديد مقاس 28 مم واختبار الشد بموقع العلمين الجديدة.',
+    assignedToEmpId: 'emp4',
+    assignedToEmpName: 'سامح سمير',
+    assignedBy: 'إدارة الورشة المركزية',
+    relatedType: 'maintenance',
+    relatedEntityId: 'c3',
+    relatedEntityName: 'ونش KOBELCO CKE 2500',
+    dueDate: '2026-08-12',
+    priority: 'medium',
+    status: 'in_progress'
+  },
+  {
+    id: 'task-106',
+    taskNo: 'TSK-2026-006',
+    title: 'معايرة أنظمة الحساسات والفرامل بالورشة المركزية',
+    description: 'فحص الحساسات الإلكترونية وضغط الهواء لفرامل التوقف التلقائي.',
+    assignedToEmpId: 'emp3',
+    assignedToEmpName: 'ياسر حسن',
+    assignedBy: 'م. إبراهيم فوزي (مدير العمليات)',
+    relatedType: 'maintenance',
+    relatedEntityId: 'm3',
+    relatedEntityName: 'الورشة المركزية بالسادسة من أكتوبر',
+    dueDate: '2026-08-01',
+    priority: 'low',
+    status: 'completed',
+    completedAt: '2026-08-01 11:15',
+    completionNotes: 'تمت المعايرة بالكامل والتأكد من استجابة الفرامل التلقائية بنسبة 100%'
   }
 ];
 
